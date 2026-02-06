@@ -1,0 +1,63 @@
+name: CI/CD - Loja Veloz
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_TAG: v1
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout do código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Login no Docker Hub
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3️⃣ Build das imagens
+      - name: Build images
+        run: |
+          docker build -t loja-veloz-api-gateway:${IMAGE_TAG} ./services/api-gateway
+          docker build -t loja-veloz-pedidos:${IMAGE_TAG} ./services/pedidos
+          docker build -t loja-veloz-estoque:${IMAGE_TAG} ./services/estoque
+          docker build -t loja-veloz-pagamentos:${IMAGE_TAG} ./services/pagamentos
+
+      # 4️⃣ Listar imagens (debug)
+      - name: List images
+        run: docker images
+
+      # 5️⃣ Testes básicos (healthcheck)
+      - name: Run container tests
+        run: |
+          docker run -d -p 8080:8080 --name test-api loja-veloz-api-gateway:${IMAGE_TAG}
+          sleep 8
+          curl -f http://localhost:8080/health
+          docker stop test-api
+          docker rm test-api
+
+      # 6️⃣ Tag + Push
+      - name: Push images
+        run: |
+          USER=${{ secrets.DOCKERHUB_USERNAME }}
+
+          docker tag loja-veloz-api-gateway:${IMAGE_TAG} $USER/loja-veloz-api-gateway:${IMAGE_TAG}
+          docker tag loja-veloz-pedidos:${IMAGE_TAG} $USER/loja-veloz-pedidos:${IMAGE_TAG}
+          docker tag loja-veloz-estoque:${IMAGE_TAG} $USER/loja-veloz-estoque:${IMAGE_TAG}
+          docker tag loja-veloz-pagamentos:${IMAGE_TAG} $USER/loja-veloz-pagamentos:${IMAGE_TAG}
+
+          docker push $USER/loja-veloz-api-gateway:${IMAGE_TAG}
+          docker push $USER/loja-veloz-pedidos:${IMAGE_TAG}
+          docker push $USER/loja-veloz-estoque:${IMAGE_TAG}
+          docker push $USER/loja-veloz-pagamentos:${IMAGE_TAG}

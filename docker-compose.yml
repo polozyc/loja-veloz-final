@@ -1,0 +1,35 @@
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: veloz
+      POSTGRES_PASSWORD: veloz
+      POSTGRES_DB: pedidos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICE_NAME: api-gateway
+
+  pedidos:
+    build: ./services/pedidos
+    environment:
+      SERVICE_NAME: pedidos
+
+  pagamentos:
+    build: ./services/pagamentos
+    environment:
+      SERVICE_NAME: pagamentos
+
+  estoque:
+    build: ./services/estoque
+    environment:
+      SERVICE_NAME: estoque
+
+volumes:
+  pgdata:
